@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Microsoft.Diagnostics.Runtime;
 
 namespace ClrMD

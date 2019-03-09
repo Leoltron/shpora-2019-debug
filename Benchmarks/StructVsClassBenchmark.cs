@@ -4,14 +4,14 @@ using BenchmarkDotNet.Attributes;
 
 namespace Benchmarks
 {
-    public class C
+    public class C: IEquatable<C>
     {
         public int N;
         public string Str;
 
         #region Equality members
 
-        protected bool Equals(C other)
+        public bool Equals(C other)
         {
             return N == other.N && string.Equals(Str, other.Str);
         }
@@ -24,22 +24,34 @@ namespace Benchmarks
             return Equals((C) obj);
         }
 
+        #endregion
+    }
+    public struct S : IEquatable<S>
+    {
+        public int N;
+        public string Str;
+        
+        public bool Equals(S other)
+        {
+            return N == other.N && string.Equals(Str, other.Str);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is S other && Equals(other);
+        }
+
         public override int GetHashCode()
         {
             unchecked
             {
-                return (N * 397) ^ (Str?.GetHashCode() ?? 0);
+                return (N * 397) ^ (Str != null ? Str.GetHashCode() : 0);
             }
         }
-        
-        #endregion
-    }
-    public struct S
-    {
-        public int N;
-        public string Str;
     }
     
+    [MemoryDiagnoser]
+    [DisassemblyDiagnoser]
     public class StructVsClassBenchmark
     {
         private C[] classArr;
