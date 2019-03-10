@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace JPEG.Utilities
@@ -12,11 +12,15 @@ namespace JPEG.Utilities
             for (var i2 = from2; i2 < to2; i2++)
                 sum += function(i1, i2);
 
-        public static double LoopByTwoVariables(int from1, int to1, int from2, int to2, Action<int, int> function)
-            => Sum(from1, to1, x => Sum(from2, to2, y =>
+            return sum;
+        }
+
+        public static void LoopByTwoVariables(int from1, int to1, int from2, int to2, Action<int, int> function)
+        {
+            Parallel.For(from1, to1, i1 =>
             {
-                function(x, y);
-                return 0;
-            }));
+                Parallel.For(from2, to2, i2 => function(i1, i2));
+            });
+        }
     }
 }

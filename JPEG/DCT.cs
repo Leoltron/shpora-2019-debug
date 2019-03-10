@@ -53,11 +53,10 @@ namespace JPEG
 			return a * b * c;
 		}
 
+		private static readonly double a1 = 1 / Math.Sqrt(2);
 		private static double Alpha(int u)
 		{
-			if(u == 0)
-				return 1 / Math.Sqrt(2);
-			return 1;
+			return u == 0 ? a1 : 1;
 		}
 
 		private static double Beta(int height, int width)
