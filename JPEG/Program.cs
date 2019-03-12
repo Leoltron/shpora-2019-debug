@@ -66,7 +66,7 @@ namespace JPEG
 					{
 						var subMatrix = GetSubMatrix(matrix, y, DCTSize, x, DCTSize, selector);
 						ShiftMatrixValues(subMatrix, -128);
-						var channelFreqs = DCT.DCT2D(subMatrix);
+						var channelFreqs = DCT.DCT2DOpt1(subMatrix);
 						var quantizedFreqs = Quantize(channelFreqs, quality);
 						var quantizedBytes = ZigZagScan(quantizedFreqs);
 						allQuantizedBytes.AddRange(quantizedBytes);
