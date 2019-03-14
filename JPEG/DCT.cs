@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using JPEG.Utilities;
 
 namespace JPEG
@@ -30,9 +31,10 @@ namespace JPEG
 
         public static void IDCT2D(double[,] coeffs, double[,] output)
         {
-            for (var x = 0; x < coeffs.GetLength(1); x++)
-            {
-                for (var y = 0; y < coeffs.GetLength(0); y++)
+            MathEx.LoopByTwoVariables(
+                0, coeffs.GetLength(1),
+                0, coeffs.GetLength(0),
+                (x, y) =>
                 {
                     var sum = MathEx
                        .SumByTwoVariables(
@@ -43,8 +45,7 @@ namespace JPEG
                                 Alpha(u) * Alpha(v));
 
                     output[x, y] = sum * Beta(coeffs.GetLength(0), coeffs.GetLength(1));
-                }
-            }
+                });
         }
 
         public static double BasisFunction(double a, double u, double v, double x, double y, int height, int width)
@@ -90,26 +91,25 @@ namespace JPEG
             var width = input.GetLength(1);
             var coeffs = new double[height, width];
 
-            var row = new double[width];
-            var column = new double[height];
-
-            for (var i = 0; i < height; i++)
+            Parallel.For(0, height, i =>
             {
+                var row = new double[width];
                 for (var j = 0; j < width; j++)
                     row[j] = input[i, j];
                 row = DCT1D(row);
                 for (var j = 0; j < width; j++)
                     coeffs[i, j] = row[j];
-            }
+            });
 
-            for (var j = 0; j < width; j++)
+            Parallel.For(0, width, body: j =>
             {
+                var column = new double[height];
                 for (var i = 0; i < height; i++)
                     column[i] = coeffs[i, j];
                 column = DCT1D(column);
                 for (var i = 0; i < height; i++)
                     coeffs[i, j] = column[i];
-            }
+            });
 
             return coeffs;
         }
