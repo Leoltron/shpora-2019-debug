@@ -1,117 +1,193 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
-using JPEG.Utilities;
 
 namespace JPEG
 {
-    public class DCT
+    [SuppressMessage("ReSharper", "InconsistentNaming")]
+    public static class DCT
     {
-        public static double[,] DCT2D(double[,] input)
+        public static void IDCT2D(double[,] input, double[,] output)
         {
             var height = input.GetLength(0);
             var width = input.GetLength(1);
-            var coeffs = new double[width, height];
 
-            MathEx.LoopByTwoVariables(
-                0, width,
-                0, height,
-                (u, v) =>
-                {
-                    var sum = MathEx
-                       .SumByTwoVariables(
-                            0, width,
-                            0, height,
-                            (x, y) => BasisFunction(input[x, y], u, v, x, y, height, width));
-
-                    coeffs[u, v] = sum * Beta(height, width) * Alpha(u) * Alpha(v);
-                });
-
-            return coeffs;
-        }
-
-        public static void IDCT2D(double[,] coeffs, double[,] output)
-        {
-            MathEx.LoopByTwoVariables(
-                0, coeffs.GetLength(1),
-                0, coeffs.GetLength(0),
-                (x, y) =>
-                {
-                    var sum = MathEx
-                       .SumByTwoVariables(
-                            0, coeffs.GetLength(1),
-                            0, coeffs.GetLength(0),
-                            (u, v) =>
-                                BasisFunction(coeffs[u, v], u, v, x, y, coeffs.GetLength(0), coeffs.GetLength(1)) *
-                                Alpha(u) * Alpha(v));
-
-                    output[x, y] = sum * Beta(coeffs.GetLength(0), coeffs.GetLength(1));
-                });
-        }
-
-        public static double BasisFunction(double a, double u, double v, double x, double y, int height, int width)
-        {
-            var b = Math.Cos(((2d * x + 1d) * u * Math.PI) / (2 * width));
-            var c = Math.Cos(((2d * y + 1d) * v * Math.PI) / (2 * height));
-
-            return a * b * c;
-        }
-
-        private static readonly double a1 = 1 / Math.Sqrt(2);
-
-        private static double Alpha(int u)
-        {
-            return u == 0 ? a1 : 1;
-        }
-
-        private static double Beta(int height, int width)
-        {
-            return 1d / width + 1d / height;
-        }
-
-        public static double[] DCT1D(double[] input)
-        {
-            var count = input.Length;
-            var output = new double[count];
-            for (var u = 0; u < count; u++)
+            for (var i = 0; i < height; i++)
             {
-                for (var x = 0; x < count; x++)
+                var row = new double[width];
+                for (var j = 0; j < width; j++)
+                    row[j] = input[i, j];
+                row = IDCT1D(row);
+                for (var j = 0; j < width; j++)
+                    output[i, j] = row[j];
+            }
+
+            for (var j = 0; j < width; j++)
+            {
+                var column = new double[height];
+                for (var i = 0; i < height; i++)
+                    column[i] = output[i, j];
+                column = IDCT1D(column);
+                for (var i = 0; i < height; i++)
+                    output[i, j] = column[i];
+            }
+        }
+
+        private static readonly double sqrt = 2 * Math.Sqrt(2);
+
+        private static double[] IDCT1D(IReadOnlyList<double> input)
+        {
+            var count = input.Count;
+            var output = new double[count];
+            var fact = Math.PI / count;
+            var d = input[0];
+
+            for (var k = 0; k < count; k++)
+            {
+                output[k] = d;
+                for (var n = 1; n < count; n++)
                 {
-                    output[u] += input[x] * Math.Cos(((2d * x + 1) * u * Math.PI) / (2 * count));
+                    output[k] += input[n] * Math.Cos(fact * n * (k + 0.5d));
                 }
 
-                output[u] *= Alpha(u) / 2;
+                output[k] /= sqrt;
             }
 
             return output;
         }
 
-        public static double[,] DCT2DOpt1(double[,] input)
+        public static double[,] DCT2D8x8(double[,] input)
         {
-            var height = input.GetLength(0);
-            var width = input.GetLength(1);
-            var coeffs = new double[height, width];
-
-            Parallel.For(0, height, i =>
+            if (input.GetLength(0) != 8 || input.GetLength(1) != 8)
             {
-                var row = new double[width];
-                for (var j = 0; j < width; j++)
-                    row[j] = input[i, j];
-                row = DCT1D(row);
-                for (var j = 0; j < width; j++)
-                    coeffs[i, j] = row[j];
-            });
+                throw new ArgumentException($"Expected array 8x8, got {input.GetLength(0)}x{input.GetLength(1)}");
+            }
 
-            Parallel.For(0, width, body: j =>
+            var output = new double[8, 8];
+            var tmp = new int[8, 8];
+
+            const int
+                c1 = 1004, // cos(pi/16) << 10 
+                s1 = 200, // sin(pi/16) 
+                c3 = 851, // cos(3pi/16) << 10 
+                s3 = 569, // sin(3pi/16) << 10 
+                r2c6 = 554, // sqrt(2)*cos(6pi/16) << 10 
+                r2s6 = 1337, // sqrt(2)*sin(6pi/16) << 10 
+                r2 = 181; // sqrt(2) << 7
+
+            for (var i = 0; i < 8; i++)
             {
-                var column = new double[height];
-                for (var i = 0; i < height; i++)
-                    column[i] = coeffs[i, j];
-                column = DCT1D(column);
-                for (var i = 0; i < height; i++)
-                    coeffs[i, j] = column[i];
-            });
+                var x0 = (int) input[i, 0];
+                var x1 = (int) input[i, 1];
+                var x2 = (int) input[i, 2];
+                var x3 = (int) input[i, 3];
+                var x4 = (int) input[i, 4];
+                var x5 = (int) input[i, 5];
+                var x6 = (int) input[i, 6];
+                var x7 = (int) input[i, 7];
 
-            return coeffs;
+                /* Stage 1 */
+                var x8 = x7 + x0;
+                x0 -= x7;
+                x7 = x1 + x6;
+                x1 -= x6;
+                x6 = x2 + x5;
+                x2 -= x5;
+                x5 = x3 + x4;
+                x3 -= x4;
+
+                /* Stage 2 */
+                x4 = x8 + x5;
+                x8 -= x5;
+                x5 = x7 + x6;
+                x7 -= x6;
+                x6 = c1 * (x1 + x2);
+                x2 = (-s1 - c1) * x2 + x6;
+                x1 = (s1 - c1) * x1 + x6;
+                x6 = c3 * (x0 + x3);
+                x3 = (-s3 - c3) * x3 + x6;
+                x0 = (s3 - c3) * x0 + x6;
+
+                /* Stage 3 */
+                x6 = x4 + x5;
+                x4 -= x5;
+                x5 = r2c6 * (x7 + x8);
+                x7 = (-r2s6 - r2c6) * x7 + x5;
+                x8 = (r2s6 - r2c6) * x8 + x5;
+                x5 = x0 + x2;
+                x0 -= x2;
+                x2 = x3 + x1;
+                x3 -= x1;
+
+                /* Stage 4 and output */
+                tmp[i, 0] = x6;
+                tmp[i, 4] = x4;
+                tmp[i, 2] = x8 >> 10;
+                tmp[i, 6] = x7 >> 10;
+                tmp[i, 7] = (x2 - x5) >> 10;
+                tmp[i, 1] = (x2 + x5) >> 10;
+                tmp[i, 3] = (x3 * r2) >> 17;
+                tmp[i, 5] = (x0 * r2) >> 17;
+            }
+
+            for (var i = 0; i < 8; i++)
+            {
+                var x0 = tmp[0, i];
+                var x1 = tmp[1, i];
+                var x2 = tmp[2, i];
+                var x3 = tmp[3, i];
+                var x4 = tmp[4, i];
+                var x5 = tmp[5, i];
+                var x6 = tmp[6, i];
+                var x7 = tmp[7, i];
+
+                /* Stage 1 */
+                var x8 = x7 + x0;
+                x0 -= x7;
+                x7 = x1 + x6;
+                x1 -= x6;
+                x6 = x2 + x5;
+                x2 -= x5;
+                x5 = x3 + x4;
+                x3 -= x4;
+
+                /* Stage 2 */
+                x4 = x8 + x5;
+                x8 -= x5;
+                x5 = x7 + x6;
+                x7 -= x6;
+                x6 = c1 * (x1 + x2);
+                x2 = (-s1 - c1) * x2 + x6;
+                x1 = (s1 - c1) * x1 + x6;
+                x6 = c3 * (x0 + x3);
+                x3 = (-s3 - c3) * x3 + x6;
+                x0 = (s3 - c3) * x0 + x6;
+
+                /* Stage 3 */
+                x6 = x4 + x5;
+                x4 -= x5;
+                x5 = r2c6 * (x7 + x8);
+                x7 = (-r2s6 - r2c6) * x7 + x5;
+                x8 = (r2s6 - r2c6) * x8 + x5;
+                x5 = x0 + x2;
+                x0 -= x2;
+                x2 = x3 + x1;
+                x3 -= x1;
+
+                /* Stage 4 and output */
+                output[0, i] = (x6 + 16) >> 3;
+                output[4, i] = (x4 + 16) >> 3;
+                output[2, i] = (x8 + 16384) >> 13;
+                output[6, i] = (x7 + 16384) >> 13;
+                output[7, i] = (x2 - x5 + 16384) >> 13;
+                output[1, i] = (x2 + x5 + 16384) >> 13;
+                output[3, i] = ((x3 >> 8) * r2 + 8192) >> 12;
+                output[5, i] = ((x0 >> 8) * r2 + 8192) >> 12;
+            }
+
+            return output;
         }
     }
 }

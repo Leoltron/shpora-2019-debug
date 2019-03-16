@@ -1,6 +1,7 @@
 ﻿using System;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Running;
+using JPEG;
 
 namespace Benchmarks
 {
@@ -9,7 +10,8 @@ namespace Benchmarks
         public static void Main(string[] args)
         {
 //            BenchmarkRunner.Run<MemoryTraffic>();
-            BenchmarkRunner.Run<StructVsClassBenchmark>();
+//            BenchmarkRunner.Run<StructVsClassBenchmark>();
+            BenchmarkRunner.Run<BenchmarkProvider>();
 //            BenchmarkRunner.Run<BitCountBenchmark>();
 //            BenchmarkRunner.Run<ByteArrayEqualityBenchmark>();
 //            BenchmarkRunner.Run<SortedVsUnsorted>();
