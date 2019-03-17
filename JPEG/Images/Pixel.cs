@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 
 namespace JPEG.Images
 {
@@ -14,19 +13,19 @@ namespace JPEG.Images
         {
             switch (pixelFormat)
             {
-                case PixelFormat.RGB:
+                case PixelFormat.Rgb:
                     R = firstComponent;
                     G = secondComponent;
                     B = thirdComponent;
                     break;
                 case PixelFormat.YCbCr:
-                    var Y = firstComponent;
-                    var Cb = secondComponent;
-                    var Cr = thirdComponent;
+                    var y = firstComponent;
+                    var cb = secondComponent;
+                    var cr = thirdComponent;
 
-                    R = ToByte((298.082 * Y + 408.583 * Cr) / 256.0 - 222.921);
-                    G = ToByte((298.082 * Y - 100.291 * Cb - 208.120 * Cr) / 256.0 + 135.576);
-                    B = ToByte((298.082 * Y + 516.412 * Cb) / 256.0 - 276.836);
+                    R = ToByte((298.082 * y + 408.583 * cr) / 256.0 - 222.921);
+                    G = ToByte((298.082 * y - 100.291 * cb - 208.120 * cr) / 256.0 + 135.576);
+                    B = ToByte((298.082 * y + 516.412 * cb) / 256.0 - 276.836);
                     break;
                 default:
                     throw new FormatException("Unknown pixel format: " + pixelFormat);
@@ -44,7 +43,7 @@ namespace JPEG.Images
         public byte Cr => ToByte(128.0 + (112.439 * R - 94.154 * G - 18.285 * B) / 256.0);
 
 
-        public static byte ToByte(double d)
+        private static byte ToByte(double d)
         {
             var val = (int) d;
             if (val > byte.MaxValue)

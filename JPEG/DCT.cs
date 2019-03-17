@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace JPEG
 {
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     public static class DCT
     {
+        private static readonly double sqrt = 2 * Math.Sqrt(2);
+
         public static void IDCT2D(double[,] input, double[,] output)
         {
             var height = input.GetLength(0);
@@ -35,8 +35,6 @@ namespace JPEG
             }
         }
 
-        private static readonly double sqrt = 2 * Math.Sqrt(2);
-
         private static double[] IDCT1D(IReadOnlyList<double> input)
         {
             var count = input.Count;
@@ -47,10 +45,7 @@ namespace JPEG
             for (var k = 0; k < count; k++)
             {
                 output[k] = d;
-                for (var n = 1; n < count; n++)
-                {
-                    output[k] += input[n] * Math.Cos(fact * n * (k + 0.5d));
-                }
+                for (var n = 1; n < count; n++) output[k] += input[n] * Math.Cos(fact * n * (k + 0.5d));
 
                 output[k] /= sqrt;
             }
@@ -61,9 +56,7 @@ namespace JPEG
         public static double[,] DCT2D8x8(double[,] input)
         {
             if (input.GetLength(0) != 8 || input.GetLength(1) != 8)
-            {
                 throw new ArgumentException($"Expected array 8x8, got {input.GetLength(0)}x{input.GetLength(1)}");
-            }
 
             var output = new double[8, 8];
             var tmp = new int[8, 8];

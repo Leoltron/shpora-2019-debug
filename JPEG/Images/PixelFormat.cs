@@ -2,7 +2,7 @@
 {
     public enum PixelFormat
     {
-        RGB,
+        Rgb,
         YCbCr
     }
 }

@@ -3,10 +3,10 @@ using System.Drawing.Imaging;
 
 namespace JPEG.Images
 {
-    class Matrix
+    internal class Matrix
     {
-        public readonly Pixel[,] Pixels;
         public readonly int Height;
+        public readonly Pixel[,] Pixels;
         public readonly int Width;
 
         public Matrix(int height, int width)
@@ -17,7 +17,7 @@ namespace JPEG.Images
             Pixels = new Pixel[height, width];
             for (var i = 0; i < height; ++i)
             for (var j = 0; j < width; ++j)
-                Pixels[i, j] = new Pixel(0, 0, 0, PixelFormat.RGB);
+                Pixels[i, j] = new Pixel(0, 0, 0, PixelFormat.Rgb);
         }
 
         public static explicit operator Matrix(Bitmap bmp)
@@ -33,9 +33,7 @@ namespace JPEG.Images
                 {
                     var row = (byte*) bmd.Scan0 + y * bmd.Stride;
                     for (var x = 0; x < width; x++)
-                    {
-                        matrix.Pixels[y, x] = new Pixel(row[3 * x + 2], row[3 * x + 1], row[3 * x], PixelFormat.RGB);
-                    }
+                        matrix.Pixels[y, x] = new Pixel(row[3 * x + 2], row[3 * x + 1], row[3 * x], PixelFormat.Rgb);
                 }
             }
 

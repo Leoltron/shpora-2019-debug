@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JPEG.Images;
@@ -14,6 +14,11 @@ namespace JPEG
     public static class Program
     {
         private const int CompressionQuality = 70;
+
+        private const int DctSize = 8;
+        private const int DctSizeSqr = DctSize * DctSize;
+
+        private static readonly Func<Pixel, double>[] PixelYCbCrSelectors = {p => p.Y, p => p.Cb, p => p.Cr};
 
 
         public static void Main()
@@ -70,7 +75,7 @@ namespace JPEG
             {
                 var (x, y) = indices[i];
                 bytes[i] = new List<byte>();
-                foreach (var selector in new Func<Pixel, double>[] {p => p.Y, p => p.Cb, p => p.Cr})
+                foreach (var selector in PixelYCbCrSelectors)
                 {
                     var subMatrix = GetSubMatrix(matrix, y, DctSize, x, DctSize, selector);
                     ShiftMatrixValues(subMatrix, -128);
@@ -227,9 +232,7 @@ namespace JPEG
             var quantizationMatrix = GetQuantizationMatrix(quality);
             for (var y = 0; y < channelFreqs.GetLength(0); y++)
             for (var x = 0; x < channelFreqs.GetLength(1); x++)
-            {
                 result[y, x] = (byte) (channelFreqs[y, x] / quantizationMatrix[y, x]);
-            }
 
             return result;
         }
@@ -241,11 +244,9 @@ namespace JPEG
 
             for (var y = 0; y < quantizedBytes.GetLength(0); y++)
             for (var x = 0; x < quantizedBytes.GetLength(1); x++)
-            {
                 result[y, x] =
-                    ((sbyte) quantizedBytes[y, x]) *
+                    (sbyte) quantizedBytes[y, x] *
                     quantizationMatrix[y, x]; //NOTE cast to sbyte not to loose negative numbers
-            }
 
             return result;
         }
@@ -271,14 +272,9 @@ namespace JPEG
 
             for (var y = 0; y < result.GetLength(0); y++)
             for (var x = 0; x < result.GetLength(1); x++)
-            {
                 result[y, x] = (multiplier * result[y, x] + 50) / 100;
-            }
 
             return result;
         }
-
-        private const int DctSize = 8;
-        private const int DctSizeSqr = DctSize * DctSize;
     }
 }

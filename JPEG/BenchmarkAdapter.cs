@@ -2,7 +2,7 @@ using BenchmarkDotNet.Attributes;
 
 namespace JPEG
 {
-    public class BenchmarkProvider
+    public class BenchmarkAdapter
     {
         [Benchmark]
         public void Main()
